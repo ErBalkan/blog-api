@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import com.erbalkan.blog_api.entity.Post;
 import com.erbalkan.blog_api.repository.PostRepository;
 import com.erbalkan.blog_api.service.abstracts.PostService;
+import com.erbalkan.blog_api.utils.exception.ResourceNotFoundException;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,22 +37,26 @@ public class PostServiceImpl implements PostService {
         return postRepository.findById(id);
     }
 
-    @Override
-    public Post updatePost(Long id, Post post) {
-        Optional<Post> existingPost = postRepository.findById(id);
-        if (existingPost.isPresent()) {
-            Post updated = existingPost.get();
-            updated.setTitle(post.getTitle());
-            updated.setContent(post.getContent());
-            return postRepository.save(updated);
-        } else {
-            throw new RuntimeException("Post not found with id: " + id);
-        }
-    }
+@Override
+public Post updatePost(Long id, Post post) { 
+    Post existingPost = postRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + id));
+        // Mevcut postu bul, eğer yoksa ResourceNotFoundException fırlat
+        // Eğer post bulunamazsa, ResourceNotFoundException fırlatılır.
+        // orElseThrow → Eğer kayıt bulunmazsa özel hata fırlatır, bu da global handler’a düşer
+        existingPost.setTitle(post.getTitle()); // Post başlığını güncelle
+    existingPost.setContent(post.getContent()); // Post içeriğini güncelle
 
-    @Override
-    public void deletePost(Long id) {
-        postRepository.deleteById(id);
-    }
+    return postRepository.save(existingPost); // Güncellenmiş postu kaydet ve döndür
+}
+
+@Override
+public void deletePost(Long id) {
+    Post post = postRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + id));
+    
+    postRepository.delete(post);
+}
+
 }
 
